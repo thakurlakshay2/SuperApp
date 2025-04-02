@@ -1,19 +1,13 @@
+"use client";
 import React, { useState } from "react";
 import { motion } from "framer-motion";
 import { ArrowRight, Trash2 } from "lucide-react";
 
-function cn(...classes: (string | undefined)[]) {
+function cn(...classes) {
   return classes.filter(Boolean).join(" ");
 }
-interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: "default" | "ghost";
-}
 
-const Button: React.FC<ButtonProps> = ({
-  className,
-  variant = "default",
-  ...props
-}) => {
+const Button = ({ className, variant = "default", ...props }) => {
   return (
     <button
       className={cn(
@@ -29,9 +23,7 @@ const Button: React.FC<ButtonProps> = ({
   );
 };
 
-interface CardProps extends React.HTMLAttributes<HTMLDivElement> {}
-
-const Card: React.FC<CardProps> = ({ className, ...props }) => {
+const Card = ({ className, ...props }) => {
   return (
     <div
       className={cn(
@@ -41,12 +33,6 @@ const Card: React.FC<CardProps> = ({ className, ...props }) => {
       {...props}
     />
   );
-};
-
-interface CardContentProps extends React.HTMLAttributes<HTMLDivElement> {}
-
-const CardContent: React.FC<CardContentProps> = ({ className, ...props }) => {
-  return <div className={cn("p-4", className)} {...props} />;
 };
 
 const initialGroups = [
@@ -69,24 +55,24 @@ export default function Page() {
   const [groups, setGroups] = useState(initialGroups);
 
   const addTransaction = (groupId) => {
-    // const name = prompt("Enter name:");
-    // const amount = parseFloat(prompt("Enter amount:"));
-    // const type = prompt("Enter type (sent/received):");
+    const name = prompt("Enter name:");
+    const amount = parseFloat(prompt("Enter amount:"));
+    const type = prompt("Enter type (sent/received):");
 
-    // if (name && !isNaN(amount) && (type === "sent" || type === "received")) {
-    //   setGroups((prev) =>
-    //     prev.map((group) =>
-    //       group.id === groupId
-    //         ? {
-    //             ...group,
-    //             transactions: [
-    //               ...group.transactions,
-    //               { id: Date.now(), name, amount, type },
-    //             ],
-    //           }
-    //         : group
-    //     )
-    //   );
+    if (name && !isNaN(amount) && (type === "sent" || type === "received")) {
+      setGroups((prev) =>
+        prev.map((group) =>
+          group.id === groupId
+            ? {
+                ...group,
+                transactions: [
+                  ...group.transactions,
+                  { id: Date.now(), name, amount, type },
+                ],
+              }
+            : group
+        )
+      );
     }
   };
 
