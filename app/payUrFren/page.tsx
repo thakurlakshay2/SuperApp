@@ -1,91 +1,73 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { ArrowRight, Trash2 } from "lucide-react";
-
-function cn(...classes) {
-  return classes.filter(Boolean).join(" ");
-}
-
-const Button = ({ className, variant = "default", ...props }) => {
-  return (
-    <button
-      className={cn(
-        "px-4 py-2 rounded-lg font-semibold transition",
-        variant === "default" ? "bg-blue-500 text-white hover:bg-blue-600" : "",
-        variant === "ghost"
-          ? "bg-transparent text-gray-700 hover:bg-gray-100"
-          : "",
-        className
-      )}
-      {...props}
-    />
-  );
-};
-
-const Card = ({ className, ...props }) => {
-  return (
-    <div
-      className={cn(
-        "rounded-xl shadow-md bg-white p-4 border border-gray-200",
-        className
-      )}
-      {...props}
-    />
-  );
-};
+import { Plus } from "lucide-react";
+import TotalBalance from "@/components/TotalBalance";
+import GroupList from "@/components/GroupedList";
+import AddTransactionModal from "@/components/AddTransactionModal";
+import { Button } from "@/components/Button";
+// import Button from "@/components/Button";
 
 const initialGroups = [
   {
     id: 1,
     name: "Trip to Goa",
+    createdAt: "2024-03-01",
+    members: ["Alice", "Bob", "Charlie"],
     transactions: [
-      { id: 1, name: "Alice", amount: 120, type: "sent" },
-      { id: 2, name: "Bob", amount: 75, type: "received" },
+      {
+        id: 1,
+        name: "Alice",
+        amount: 120,
+        type: "sent",
+        currency: "USD",
+        timestamp: "10:30 AM",
+      },
+      {
+        id: 2,
+        name: "Bob",
+        amount: 75,
+        type: "received",
+        currency: "USD",
+        timestamp: "11:00 AM",
+      },
     ],
   },
   {
     id: 2,
     name: "Office Lunch",
-    transactions: [{ id: 3, name: "Charlie", amount: 200, type: "sent" }],
+    createdAt: "2024-03-05",
+    members: ["Charlie", "David"],
+    transactions: [
+      {
+        id: 3,
+        name: "Charlie",
+        amount: 200,
+        type: "sent",
+        currency: "USD",
+        timestamp: "1:00 PM",
+      },
+    ],
   },
 ];
 
 export default function Page() {
-  const [groups, setGroups] = useState(initialGroups);
+  const [groups, setGroups] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
-  const addTransaction = (groupId) => {
-    const name = prompt("Enter name:");
-    const amount = parseFloat(prompt("Enter amount:"));
-    const type = prompt("Enter type (sent/received):");
+  useEffect(() => {
+    setTimeout(() => {
+      setGroups(initialGroups);
+      setIsLoading(false);
+    }, 2000);
+  }, []);
 
-    if (name && !isNaN(amount) && (type === "sent" || type === "received")) {
-      setGroups((prev) =>
-        prev.map((group) =>
-          group.id === groupId
-            ? {
-                ...group,
-                transactions: [
-                  ...group.transactions,
-                  { id: Date.now(), name, amount, type },
-                ],
-              }
-            : group
-        )
-      );
-    }
-  };
-
-  const removeTransaction = (groupId, txnId) => {
+  const addTransaction = (groupId, transaction) => {
     setGroups((prev) =>
       prev.map((group) =>
         group.id === groupId
-          ? {
-              ...group,
-              transactions: group.transactions.filter(
-                (txn) => txn.id !== txnId
-              ),
-            }
+          ? { ...group, transactions: [...group.transactions, transaction] }
           : group
       )
     );
@@ -102,48 +84,22 @@ export default function Page() {
         PayurFren
       </motion.h1>
 
-      {groups.map((group) => (
-        <div key={group.id} className="w-full max-w-md mb-8">
-          <h2 className="text-xl font-semibold text-gray-700 mb-3">
-            {group.name}
-          </h2>
-          <div className="space-y-4">
-            {group.transactions.map((txn) => (
-              <motion.div
-                key={txn.id}
-                initial={{ opacity: 0, x: txn.type === "sent" ? -50 : 50 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.5 }}
-              >
-                <Card className="p-4 flex items-center justify-between rounded-xl shadow-md bg-white">
-                  <span className="text-lg font-semibold">{txn.name}</span>
-                  <div
-                    className={`flex items-center space-x-2 ${
-                      txn.type === "sent" ? "text-red-500" : "text-green-500"
-                    }`}
-                  >
-                    {txn.type === "sent" ? "-" : "+"}${txn.amount}
-                    <ArrowRight className="w-5 h-5" />
-                  </div>
-                  <Button
-                    className="ml-4 p-1 text-red-500 hover:text-red-700"
-                    variant="ghost"
-                    onClick={() => removeTransaction(group.id, txn.id)}
-                  >
-                    <Trash2 className="w-5 h-5" />
-                  </Button>
-                </Card>
-              </motion.div>
-            ))}
-          </div>
-          <Button
-            className="mt-4 bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded-lg shadow"
-            onClick={() => addTransaction(group.id)}
-          >
-            Add Expense
-          </Button>
-        </div>
-      ))}
+      <TotalBalance groups={groups} isLoading={isLoading} />
+      <GroupList groups={groups} isLoading={isLoading} />
+
+      <Button
+        className="fixed bottom-6 right-6 bg-blue-500 hover:bg-blue-600 text-white p-4 rounded-full shadow-lg"
+        onClick={() => setIsModalOpen(true)}
+      >
+        <Plus className="w-6 h-6" />
+      </Button>
+
+      <AddTransactionModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onAddTransaction={addTransaction}
+        groups={groups}
+      />
     </div>
   );
 }
