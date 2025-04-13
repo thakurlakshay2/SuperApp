@@ -117,8 +117,16 @@ export default function Page() {
         PayurFren
       </motion.h1>
 
+      <div className="flex gap-8 w-full mb-8 justify-center">
+        <TotalBalance groups={groups} isLoading={isLoading} />{" "}
+        <Button
+          className="invisible md:visible w-1/3  bg-blue-500 hover:bg-blue-600 text-white p-4 rounded-full shadow-lg"
+          onClick={() => setIsModalOpen(true)}
+        >
+          Add Group
+        </Button>
+      </div>
       {/* Top Bar: Total Owed Amount */}
-      <TotalBalance groups={groups} isLoading={isLoading} />
 
       {/* Filters & Sorting */}
       <div className="w-full mb-4">
@@ -168,10 +176,10 @@ export default function Page() {
 
       {/* Add Transaction Floating Button */}
       <Button
-        className="fixed bottom-6 right-6 bg-blue-500 hover:bg-blue-600 text-white p-4 rounded-full shadow-lg"
+        className="visible md:invisible fixed bottom-6 right-6 bg-blue-500 hover:bg-blue-600 text-white p-4 rounded-full shadow-lg"
         onClick={() => setIsModalOpen(true)}
       >
-        <Plus className="w-6 h-6" />
+        <Plus className="w-8 h-8" />
       </Button>
 
       {/* Add Transaction Modal */}

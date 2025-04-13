@@ -120,7 +120,7 @@ export default function AddGroupModalContent({
 
   return (
     <motion.div
-      className="p-4 w-full sm:w-4/5 md:w-3/4 lg:w-1/2 xl:w-[40%]"
+      className="p-4 w-full"
       initial={{ opacity: 0, scale: 0.95 }}
       animate={{ opacity: 1, scale: 1 }}
     >
@@ -132,7 +132,7 @@ export default function AddGroupModalContent({
             <img
               src={image}
               alt="Group"
-              className="w-24 h-24 rounded-full shadow-md"
+              className="w-16 h-16 md:w-24 md:h-24 rounded-full shadow-md"
             />
           </div>
           <label className="block mb-2 text-sm font-medium">Group Name</label>

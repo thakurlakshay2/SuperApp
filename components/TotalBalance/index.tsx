@@ -22,7 +22,7 @@ export default function TotalBalance({ groups, isLoading }: TotalBalanceProps) {
   }, 0);
 
   return (
-    <div className="w-full max-w-md p-4 bg-white rounded-lg shadow-md mb-4 flex justify-between items-center">
+    <div className="w-full max-w-md p-4 bg-white rounded-lg shadow-md  flex justify-between items-center">
       <span className="text-lg font-semibold text-gray-800">
         Total Balance:
       </span>
