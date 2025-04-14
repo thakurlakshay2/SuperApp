@@ -13,84 +13,6 @@ import { debounce } from "lodash";
 // Lazy load the calculator modal
 const CalculatorModal = lazy(() => import("./CalculatorModal"));
 
-const calculators = {
-  Investment: [
-    "SIP Calculator",
-    "SWP Calculator",
-    "Lumpsum Investment Calculator",
-    "Mutual Fund Return Calculator",
-    "Wealth Accumulation Calculator",
-    "Goal-Based Investment Calculator",
-    "Recurring Deposit (RD) Calculator",
-    "Fixed Deposit (FD) Calculator",
-    "PPF Calculator",
-    "ELSS Tax Saving Calculator",
-    "Gold Investment Calculator",
-    "Stock Return Calculator",
-    "Real Estate Investment Calculator",
-    "ULIP Calculator",
-  ],
-  Loan: [
-    "Home Loan EMI Calculator",
-    "Car Loan EMI Calculator",
-    "Personal Loan EMI Calculator",
-    "Education Loan EMI Calculator",
-    "Loan Prepayment Calculator",
-    "Loan Eligibility Calculator",
-    "Balance Transfer Calculator",
-    "Interest-only EMI Calculator",
-    "Business Loan Calculator",
-  ],
-  Savings: [
-    "Compound Interest Calculator",
-    "Simple Interest Calculator",
-    "Wealth Growth Calculator",
-    "Emergency Fund Calculator",
-    "Savings Goal Calculator",
-    "Net Worth Calculator",
-    "Retirement Corpus Calculator",
-  ],
-  Tax: [
-    "Income Tax Calculator",
-    "HRA Exemption Calculator",
-    "Gratuity Calculator",
-    "Salary Breakup Calculator",
-    "Post-Tax Return Calculator",
-    "Capital Gains Tax Calculator",
-    "Advance Tax Calculator",
-  ],
-  Retirement: [
-    "Retirement Calculator",
-    "Pension Calculator",
-    "Annuity Calculator",
-    "Inflation-adjusted Retirement Calculator",
-    "Post-retirement Income Calculator",
-  ],
-  Insurance: [
-    "Term Insurance Premium Calculator",
-    "Life Insurance Need Calculator",
-    "Health Insurance Premium Calculator",
-    "Motor Insurance Premium Calculator",
-  ],
-  Miscellaneous: [
-    "Inflation Impact Calculator",
-    "Real Return Calculator",
-    "Currency Exchange Calculator",
-    "Purchasing Power Calculator",
-  ],
-};
-
-const categoryColors = {
-  Investment: "from-blue-400 to-indigo-600",
-  Loan: "from-red-400 to-pink-600",
-  Savings: "from-green-400 to-teal-600",
-  Tax: "from-yellow-400 to-orange-600",
-  Retirement: "from-purple-400 to-violet-600",
-  Insurance: "from-pink-400 to-red-600",
-  Miscellaneous: "from-gray-400 to-slate-600",
-};
-
-// Memoize the category cards to prevent unnecessary re-renders
 const CategoryCard = memo(
   ({
     category,
@@ -161,7 +83,7 @@ export default function CalculatorsPage() {
   );
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-100 to-rose-100 p-6">
+    <div className="min-h-screen p-6">
       <h1 className="text-4xl font-bold text-center mb-8 text-blue-950 drop-shadow-md">
         All Financial Calculators
       </h1>
