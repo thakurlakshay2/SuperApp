@@ -1,4 +1,5 @@
 export enum CalculatorCategory {
+  Warikoo = "Warikoo",
   Investment = "Investment",
   Loan = "Loan",
   Savings = "Savings",
@@ -24,6 +25,11 @@ export const calculatorCategories: Record<
   CalculatorCategory,
   CalculatorCategoryData
 > = {
+  [CalculatorCategory.Warikoo]: {
+    name: CalculatorCategory.Warikoo,
+    calculators: [],
+    gradient: "from-blue-400 to-indigo-600",
+  },
   [CalculatorCategory.Investment]: {
     name: CalculatorCategory.Investment,
     calculators: [
