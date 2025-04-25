@@ -1,10 +1,15 @@
 // components/StepUpInvestment.tsx
 "use client";
 
-import { useState, useEffect, SetStateAction, Dispatch } from "react";
+import {
+  useState,
+  useEffect,
+  SetStateAction,
+  Dispatch,
+  useCallback,
+} from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import formatCurrency from "@/utils/formatCurrency";
-import { evaluate } from "mathjs";
 
 interface StepUpInvestmentProps {
   enabled: boolean;
@@ -13,9 +18,7 @@ interface StepUpInvestmentProps {
   baseInvestment: number | undefined;
   onStepUpConfigChange: (stepUpConfig: StepUpYearlyConfig[]) => void;
 }
-function futureValue(principal, rate, years) {
-  return principal * Math.pow(rate, years);
-}
+
 export interface StepUpConfig {
   fromYear: number;
   toYear: number;
@@ -23,6 +26,7 @@ export interface StepUpConfig {
   investmentAmount: number;
   totalInvestmentPerYear: number;
 }
+
 export interface StepUpYearlyConfig {
   year: number;
   stepUpPercent: number;
@@ -38,42 +42,53 @@ const StepUpInvestment: React.FC<StepUpInvestmentProps> = ({
 }) => {
   const [toggle, setToggle] = useState<boolean>(false);
   const [stepUpConfigs, setStepUpConfigs] = useState<StepUpConfig[]>([]);
+  const [yearlyData, setYearlyData] = useState<StepUpYearlyConfig[]>([
+    { year: 0, stepUpPercent: 0, investment: baseInvestment || 0 },
+  ]);
   const [newStepUp, setNewStepUp] = useState<Omit<StepUpConfig, "toYear">>({
     fromYear: 1,
     increasePercent: 0,
-    investmentAmount: baseInvestment,
-    totalInvestmentPerYear: baseInvestment * years,
+    investmentAmount: baseInvestment || 0,
+    totalInvestmentPerYear: (baseInvestment || 0) * years,
   });
-  const [yearlyData, setYearlyData] = useState<StepUpYearlyConfig[]>([
-    {
-      year: 0,
-      stepUpPercent: 0,
-      investment: baseInvestment,
+  // Use this to prevent infinite loops
+  const [prevYearsRef, setPrevYearsRef] = useState<number>(years);
+  const [configUpdated, setConfigUpdated] = useState<boolean>(false);
+
+  // Calculate investment at a specific year
+  const calculateInvestmentAtYear = useCallback(
+    (targetYear: number): number => {
+      if (targetYear <= 0 || !baseInvestment) return baseInvestment || 0;
+
+      let currentInvestment = baseInvestment;
+      const sortedConfigs = [...stepUpConfigs].sort(
+        (a, b) => a.fromYear - b.fromYear
+      );
+
+      for (let y = 1; y <= targetYear; y++) {
+        const matchingConfig = sortedConfigs.find(
+          (config) => y >= config.fromYear && y <= config.toYear
+        );
+
+        if (matchingConfig) {
+          currentInvestment *= 1 + matchingConfig.increasePercent / 100;
+        }
+      }
+
+      return currentInvestment;
     },
-  ]);
+    [baseInvestment, stepUpConfigs]
+  );
 
-  useEffect(() => {
-    if (enabled) onStepUpConfigChange(yearlyData);
-  }, [enabled, yearlyData]);
-  useEffect(() => {
-    generateYearlyData();
-  }, [stepUpConfigs, years, baseInvestment]);
-
-  const generateYearlyData = () => {
-    if (!enabled || baseInvestment === undefined) {
-      setYearlyData([
-        {
-          year: 0,
-          stepUpPercent: 0,
-          investment: baseInvestment,
-        },
-      ]);
-      return;
+  // Generate yearly data - only when needed
+  const generateYearlyData = useCallback(() => {
+    if (!baseInvestment) {
+      return [{ year: 0, stepUpPercent: 0, investment: baseInvestment || 0 }];
     }
 
-    const data: { year: number; stepUpPercent: number; investment: number }[] =
-      [];
-    let currentInvestment = baseInvestment;
+    const data: StepUpYearlyConfig[] = [
+      { year: 0, stepUpPercent: 0, investment: baseInvestment },
+    ];
 
     for (let year = 1; year < years; year++) {
       let appliedStepUp = 0;
@@ -83,16 +98,113 @@ const StepUpInvestment: React.FC<StepUpInvestmentProps> = ({
 
       if (matchingConfig) {
         appliedStepUp = matchingConfig.increasePercent;
-        currentInvestment *= 1 + matchingConfig.increasePercent / 100;
       }
 
+      // Calculate investment amount for this year
+      const investment = calculateInvestmentAtYear(year);
+
       data.push({
-        year: year,
+        year,
         stepUpPercent: appliedStepUp,
-        investment: currentInvestment,
+        investment,
       });
     }
-    setYearlyData((prev) => [prev[0], ...data]);
+
+    return data;
+  }, [baseInvestment, calculateInvestmentAtYear, stepUpConfigs, years]);
+
+  // Extend step-up configs when years increase
+  const extendStepUpConfigs = useCallback(() => {
+    if (years <= prevYearsRef || stepUpConfigs.length === 0) return;
+
+    // Find the last config by toYear
+    const sortedConfigs = [...stepUpConfigs].sort(
+      (a, b) => b.toYear - a.toYear
+    );
+    const lastConfig = sortedConfigs[0];
+
+    if (!lastConfig || lastConfig.toYear >= years) return;
+
+    // Extend the last config to the new years value
+    setStepUpConfigs((prev) => {
+      return prev.map((config) => {
+        if (config.fromYear === lastConfig.fromYear) {
+          // Recalculate the total with the extended years
+          const priorAmount = calculateInvestmentAtYear(config.fromYear - 1);
+          const r = 1 + config.increasePercent / 100;
+          const n = years - config.fromYear + 1;
+
+          const totalAmount =
+            r !== 1
+              ? priorAmount * ((Math.pow(r, n) - 1) / (r - 1))
+              : priorAmount * n;
+
+          return {
+            ...config,
+            toYear: years,
+            totalInvestmentPerYear: totalAmount,
+          };
+        }
+        return config;
+      });
+    });
+  }, [years, prevYearsRef, stepUpConfigs, calculateInvestmentAtYear]);
+
+  // Handle base investment changes
+  useEffect(() => {
+    if (baseInvestment !== undefined) {
+      const updatedData = generateYearlyData();
+      setYearlyData(updatedData);
+      setConfigUpdated(true);
+    }
+  }, [baseInvestment, generateYearlyData]);
+
+  // Handle years changes
+  useEffect(() => {
+    if (years !== prevYearsRef) {
+      // Extend configs if years increased
+      if (years > prevYearsRef) {
+        extendStepUpConfigs();
+      }
+
+      // Always update yearly data when years change
+      const updatedData = generateYearlyData();
+      setYearlyData(updatedData);
+      setConfigUpdated(true);
+
+      // Store new years value
+      setPrevYearsRef(years);
+    }
+  }, [years, prevYearsRef, extendStepUpConfigs, generateYearlyData]);
+
+  // Update when stepUpConfigs change
+  useEffect(() => {
+    const updatedData = generateYearlyData();
+    setYearlyData(updatedData);
+    setConfigUpdated(true);
+  }, [stepUpConfigs, generateYearlyData]);
+
+  // Notify parent component of changes when enabled - with protection against infinite loops
+  useEffect(() => {
+    if (enabled && configUpdated) {
+      onStepUpConfigChange(yearlyData);
+      setConfigUpdated(false);
+    }
+  }, [enabled, yearlyData, onStepUpConfigChange, configUpdated]);
+
+  // Calculate total investment for a step-up period
+  const calculateTotalInvestment = (
+    fromYear: number,
+    toYear: number,
+    increasePercent: number
+  ): number => {
+    const priorAmount = calculateInvestmentAtYear(fromYear - 1);
+    const r = 1 + increasePercent / 100;
+    const n = toYear - fromYear + 1;
+
+    return r !== 1
+      ? priorAmount * ((Math.pow(r, n) - 1) / (r - 1))
+      : priorAmount * n;
   };
 
   const addStepUp = () => {
@@ -104,35 +216,30 @@ const StepUpInvestment: React.FC<StepUpInvestmentProps> = ({
     if (
       newStepUp.fromYear >= 1 &&
       newStepUp.fromYear <= years &&
-      newStepUp.increasePercent !== 0 // Allow negative percentages
+      newStepUp.increasePercent !== 0
     ) {
-      const existingIndex = stepUpConfigs.findIndex(
-        (config) => config.fromYear === newStepUp.fromYear
+      const totalAmount = calculateTotalInvestment(
+        newStepUp.fromYear,
+        years,
+        newStepUp.increasePercent
       );
 
-      const priorMultiplier = stepUpConfigs
-        .filter((c) => c.toYear < newStepUp.fromYear)
-        .reduce(
-          (acc, curr) => acc * (1 + curr.increasePercent / 100),
-          baseInvestment
-        );
-      console.log(priorMultiplier);
-      const r1 = 1 + newStepUp.increasePercent / 100;
-      const n1 = years - newStepUp.fromYear + 1;
+      const priorAmount = calculateInvestmentAtYear(newStepUp.fromYear - 1);
 
-      const estimatedAmountTotal =
-        priorMultiplier * ((Math.pow(r1, n1) - 1) / (r1 - 1));
       const newConfig: StepUpConfig = {
         fromYear: newStepUp.fromYear,
         toYear: years,
         increasePercent: newStepUp.increasePercent,
-        investmentAmount:
-          priorMultiplier * (1 + newStepUp.increasePercent / 100),
-        totalInvestmentPerYear: estimatedAmountTotal,
+        investmentAmount: priorAmount * (1 + newStepUp.increasePercent / 100),
+        totalInvestmentPerYear: totalAmount,
       };
 
-      let updatedConfigs = [...stepUpConfigs];
+      // Find if we have an existing config for this fromYear
+      const existingIndex = stepUpConfigs.findIndex(
+        (config) => config.fromYear === newStepUp.fromYear
+      );
 
+      let updatedConfigs = [...stepUpConfigs];
       if (existingIndex !== -1) {
         updatedConfigs[existingIndex] = newConfig;
       } else {
@@ -141,56 +248,36 @@ const StepUpInvestment: React.FC<StepUpInvestmentProps> = ({
 
       // Adjust toYear of preceding configs
       updatedConfigs = updatedConfigs.map((config) => {
-        const priorMultiplier = stepUpConfigs
-          .filter((c) => c.toYear < newStepUp.fromYear)
-          .reduce(
-            (acc, curr) => acc * (1 + curr.increasePercent / 100),
-            baseInvestment
+        if (
+          config.fromYear < newConfig.fromYear &&
+          config.toYear >= newConfig.fromYear
+        ) {
+          const adjustedToYear = newConfig.fromYear - 1;
+          const adjustedTotal = calculateTotalInvestment(
+            config.fromYear,
+            adjustedToYear,
+            config.increasePercent
           );
 
-        const r1 = 1 + config.increasePercent / 100;
-        const n1 = newConfig.fromYear - config.fromYear;
-        const actualPrioMultiplier = futureValue(
-          priorMultiplier,
-          r1,
-          config.fromYear
-        );
-
-        console.log(priorMultiplier);
-        console.log(actualPrioMultiplier);
-        const estimatedAmountTotal =
-          actualPrioMultiplier * ((Math.pow(r1, n1) - 1) / (r1 - 1));
-        console.log(r1);
-        console.log(n1);
-        console.log(estimatedAmountTotal);
-        return config.fromYear < newConfig.fromYear &&
-          config.toYear >= newConfig.fromYear
-          ? {
-              ...config,
-              totalInvestmentPerYear: estimatedAmountTotal + priorMultiplier,
-              toYear: newConfig.fromYear - 1,
-            }
-          : config;
+          return {
+            ...config,
+            toYear: adjustedToYear,
+            totalInvestmentPerYear: adjustedTotal,
+          };
+        }
+        return config;
       });
 
+      // Sort by fromYear
       updatedConfigs.sort((a, b) => a.fromYear - b.fromYear);
       setStepUpConfigs(updatedConfigs);
 
-      const nextFromYear = Math.min(
-        ...updatedConfigs.map((c) => c.toYear + 1).filter((y) => y <= years),
-        years
-      );
-
-      const r = 1 + newStepUp.increasePercent / 100;
-      const n = years - newStepUp.fromYear + 1;
-
-      const estimatedAmount = baseInvestment * ((Math.pow(r, n) - 1) / (r - 1));
-      console.log(estimatedAmount);
+      // Reset the new step-up form
       setNewStepUp({
-        fromYear: nextFromYear,
+        fromYear: Math.min(newStepUp.fromYear + 1, years),
         increasePercent: 0,
-        investmentAmount: estimatedAmount,
-        totalInvestmentPerYear: estimatedAmount * 12,
+        investmentAmount: baseInvestment,
+        totalInvestmentPerYear: baseInvestment * years,
       });
     } else {
       alert(
@@ -207,12 +294,9 @@ const StepUpInvestment: React.FC<StepUpInvestmentProps> = ({
   const toggleAccordion = () => {
     setToggle((prev) => !prev);
   };
-  useEffect(() => {
-    console.log(yearlyData);
-  }, [yearlyData]);
 
   return (
-    <div className=" bg-teal-100 shadow-lg rounded-xl p-4">
+    <div className="bg-teal-100 shadow-lg rounded-xl p-4">
       <div
         className="flex items-center justify-between mb-4 cursor-pointer"
         onClick={toggleAccordion}
@@ -222,6 +306,7 @@ const StepUpInvestment: React.FC<StepUpInvestmentProps> = ({
             onClick={(e) => {
               e.stopPropagation();
               setEnabled((prev) => !prev);
+              setConfigUpdated(true); // Trigger update when toggling
             }}
             type="checkbox"
             id="toggleStepUp"
@@ -365,12 +450,15 @@ const StepUpInvestment: React.FC<StepUpInvestmentProps> = ({
                               {config.increasePercent}%
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-800">
-                              {formatCurrency(config.totalInvestmentPerYear, {
-                                currency: "₹",
-                                locale: "en-IN",
-                                compact: false,
-                                decimals: 2,
-                              })}
+                              {formatCurrency(
+                                config.totalInvestmentPerYear * 12,
+                                {
+                                  currency: "₹",
+                                  locale: "en-IN",
+                                  compact: false,
+                                  decimals: 2,
+                                }
+                              )}
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                               <button
@@ -411,7 +499,7 @@ const StepUpInvestment: React.FC<StepUpInvestmentProps> = ({
                               scope="col"
                               className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
                             >
-                              Investment Amount
+                              Investment Amount /Month
                             </th>
                           </tr>
                         </thead>

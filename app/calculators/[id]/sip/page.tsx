@@ -41,6 +41,12 @@ const currencyConfig = {
   compact: true,
   decimals: 2,
 };
+
+function calculateFinalAmount(x, y, z) {
+  const monthlyGrowthFactor = 1 + y / 100;
+  const finalAmount = x * Math.pow(monthlyGrowthFactor, z);
+  return finalAmount;
+}
 export default function SIPCalculator() {
   const [baseInfo, setBaseInfo] = useState<Record<string, number>>();
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -95,6 +101,13 @@ export default function SIPCalculator() {
     setErrors((prev) => ({ ...prev, [id]: error }));
   };
 
+  function calculateSIPSum(monthlyInvestment, ratePercent, months) {
+    const r = ratePercent;
+    const sipSum =
+      monthlyInvestment * ((Math.pow(1 + r, months) - 1) / r) * (1 + r);
+    return sipSum;
+  }
+
   const calculateReturns = () => {
     if (!baseInfo || !sipData?.formula) return;
 
@@ -145,56 +158,61 @@ export default function SIPCalculator() {
 
     let totalInvestment = 0;
     let accumulatedValue = 0;
-    let currentMonthlyInvestment = initialInvestmentFromInput;
+
     console.log(stepUpConfig);
+    let totalInvestParallel = totalInvestment;
+    let accumilatedValueParallel = accumulatedValue;
+    let totalInvestmentPerMonthThisYear = initialInvestmentFromInput;
+    console.log(yearsFromInput);
     for (let year = 1; year <= yearsFromInput; year++) {
-      // currentMonthlyInvestment = stepUpConfig[year].investment;
+      if (isStepupEnabled) {
+        const applicableStepUp = stepUpConfig[year - 1];
+        if (applicableStepUp) {
+          totalInvestmentPerMonthThisYear = applicableStepUp.investment;
+        }
+      }
+
+      const yearlyInvestment = totalInvestmentPerMonthThisYear * 12;
+      totalInvestParallel += yearlyInvestment;
+
+      // Compound the previous accumulated value over 12 months
+      accumilatedValueParallel = calculateFinalAmount(
+        accumilatedValueParallel,
+        monthlyRate * 100,
+        12
+      );
+
+      // Add the future value of SIP this year
+      accumilatedValueParallel += calculateSIPSum(
+        totalInvestmentPerMonthThisYear,
+        monthlyRate,
+        12
+      );
+
+      // Optional: Adjust for inflation if needed
+      const inflationFactor = Math.pow(1 + currentInflation / 100, 1);
+
+      investmentData.push(totalInvestParallel);
+      returnsData.push(accumilatedValueParallel);
+      realReturnsData.push(accumilatedValueParallel / inflationFactor);
+      console.log({
+        year,
+        totalInvested: totalInvestParallel,
+        accumulatedValue: accumilatedValueParallel,
+        realValue: accumilatedValueParallel / inflationFactor,
+      });
     }
-    console.log(stepUpConfig);
+
+    //monthly calculation
     // for (let month = 1; month <= totalMonths; month++) {
     //   const year = Math.ceil(month / 12);
-
-    //   // Apply step-up at the beginning of each year
-    //   const applicableStepUp = stepUpConfig.find(
-    //     (config) => year >= config.fromYear && year <= config.toYear
-    //   );
-
-    //   if (month % 12 === 1) {
+    //   console.log(year);
+    //   if (isStepupEnabled) {
+    //     const applicableStepUp = stepUpConfig[year - 1];
     //     if (applicableStepUp) {
     //       // For the first month of the year, apply the step-up to the initial monthly investment
-    //       currentMonthlyInvestment =
-    //         initialInvestmentFromInput *
-    //         Math.pow(
-    //           1 + applicableStepUp.increasePercent / 100,
-    //           year - applicableStepUp.fromYear
-    //         );
-    //     } else if (
-    //       year > 1 &&
-    //       !stepUpConfig.some(
-    //         (config) => year >= config.fromYear && year <= config.toYear
-    //       )
-    //     ) {
-    //       // If no specific step-up for this year, maintain the last stepped-up amount
-    //       const lastConfig = stepUpConfig
-    //         .filter((config) => config.toYear < year)
-    //         .sort((a, b) => b.toYear - a.toYear)[0];
-
-    //       if (lastConfig) {
-    //         let previousInvestment = initialInvestmentFromInput;
-    //         for (let y = 1; y < year; y++) {
-    //           const prevStep = stepUpConfig.find(
-    //             (c) => y >= c.fromYear && y <= c.toYear
-    //           );
-    //           if (prevStep) {
-    //             previousInvestment *= 1 + prevStep.increasePercent / 100;
-    //           }
-    //         }
-    //         currentMonthlyInvestment = previousInvestment;
-    //       } else {
-    //         currentMonthlyInvestment = initialInvestmentFromInput;
-    //       }
-    //     } else if (year === 1) {
-    //       currentMonthlyInvestment = initialInvestmentFromInput; // No step-up in the first year unless configured from year 1
+    //       currentMonthlyInvestment = applicableStepUp.investment;
+    //       console.log(currentMonthlyInvestment);
     //     }
     //   }
 
@@ -204,24 +222,25 @@ export default function SIPCalculator() {
 
     //   // Adjust for inflation at the end of each year for yearly data point
     //   if (month % 12 === 0) {
-    //     const inflationFactor = Math.pow(1 + monthlyInflationRate, month);
+    //     const inflationFactor = Math.pow(1 + currentInflation / 100, 12);
+    //     console.log(inflationFactor);
     //     investmentData.push(totalInvestment);
     //     returnsData.push(accumulatedValue);
     //     realReturnsData.push(accumulatedValue / inflationFactor);
     //   }
     // }
-
-    investmentData.unshift(0);
-    returnsData.unshift(0);
-    realReturnsData.unshift(0);
+    console.log(investmentData);
+    // investmentData.unshift(0);
+    // returnsData.unshift(0);
+    // realReturnsData.unshift(0);
 
     setData({
       labels,
       investmentData,
       returnsData,
       realReturnsData,
-      totalInvestment,
-      totalReturns: accumulatedValue,
+      totalInvestment: totalInvestParallel,
+      totalReturns: accumilatedValueParallel,
     });
   };
 
@@ -240,18 +259,34 @@ export default function SIPCalculator() {
         borderColor: "rgb(255, 99, 132)",
         tension: 0.1,
       },
+      {
+        label: "Real Returns",
+        data: data?.realReturnsData,
+        borderColor: "rgb(200, 0, 255)",
+        tension: 0.1,
+      },
     ],
   };
 
   const barChartData = {
-    labels: ["Total Investment", "Total Returns", "Total Value"],
+    labels: [
+      "Total Investment",
+      `Total Returns ${isInflationEnabled ? "With Inflation" : ""}`,
+      `Total Value ${isInflationEnabled ? "With Inflation" : ""}`,
+    ],
     datasets: [
       {
         label: "Amount (₹)",
         data: [
           data?.totalInvestment,
-          data?.totalReturns - data?.totalInvestment,
-          data?.totalReturns,
+          data?.[isInflationEnabled ? "realReturnsData" : "returnsData"][
+            data?.[isInflationEnabled ? "realReturnsData" : "returnsData"]
+              .length - 1
+          ] - data?.totalInvestment,
+          data?.[isInflationEnabled ? "realReturnsData" : "returnsData"][
+            data?.[isInflationEnabled ? "realReturnsData" : "returnsData"]
+              .length - 1
+          ],
         ],
         backgroundColor: [
           "rgba(75, 192, 192, 0.6)",
@@ -392,7 +427,7 @@ export default function SIPCalculator() {
               Total Investment
             </h3>
             <p className="text-2xl font-bold text-blue-600">
-              ₹{data.totalInvestment.toLocaleString()}
+              ₹{data.totalInvestment?.toLocaleString("en-IN")}
               <span className="flex mt-2 text-xl font-regular text-blue-600">
                 (~{formatCurrency(data.totalInvestment, currencyConfig)})
               </span>
@@ -403,11 +438,23 @@ export default function SIPCalculator() {
               Total Returns
             </h3>
             <p className="text-2xl font-bold text-green-600">
-              ₹{(data.totalReturns - data.totalInvestment).toLocaleString()}
+              ₹
+              {(
+                data?.[isInflationEnabled ? "realReturnsData" : "returnsData"][
+                  data?.[isInflationEnabled ? "realReturnsData" : "returnsData"]
+                    .length - 1
+                ] - data.totalInvestment
+              )?.toLocaleString("en-IN")}
               <span className=" flex mt-2 text-xl font-regular text-green-600">
                 (~
                 {formatCurrency(
-                  data.totalReturns - data.totalInvestment,
+                  data?.[
+                    isInflationEnabled ? "realReturnsData" : "returnsData"
+                  ][
+                    data?.[
+                      isInflationEnabled ? "realReturnsData" : "returnsData"
+                    ].length - 1
+                  ] - data.totalInvestment,
                   currencyConfig
                 )}
                 )
@@ -417,9 +464,24 @@ export default function SIPCalculator() {
           <div className="bg-white p-6 rounded-lg shadow-lg">
             <h3 className="text-lg font-semibold text-gray-700">Total Value</h3>
             <p className="text-2xl font-bold text-purple-600">
-              ₹{data.totalReturns.toLocaleString()}
+              ₹
+              {data?.[isInflationEnabled ? "realReturnsData" : "returnsData"][
+                data?.[isInflationEnabled ? "realReturnsData" : "returnsData"]
+                  .length - 1
+              ].toLocaleString("en-IN")}
               <span className=" flex mt-2 text-xl font-regular text-purple-600">
-                (~{formatCurrency(data.totalReturns, currencyConfig)})
+                (~
+                {formatCurrency(
+                  data?.[
+                    isInflationEnabled ? "realReturnsData" : "returnsData"
+                  ][
+                    data?.[
+                      isInflationEnabled ? "realReturnsData" : "returnsData"
+                    ].length - 1
+                  ],
+                  currencyConfig
+                )}
+                )
               </span>
             </p>
           </div>

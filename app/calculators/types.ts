@@ -27,8 +27,27 @@ export const calculatorCategories: Record<
 > = {
   [CalculatorCategory.Warikoo]: {
     name: CalculatorCategory.Warikoo,
-    calculators: [],
-    gradient: "from-blue-400 to-indigo-600",
+    calculators: [
+      {
+        id: "Vehicle",
+        name: "Buy a Vehicle Rule",
+        category: CalculatorCategory.Warikoo,
+        path: "/calculators/warikoo/vehicle",
+      },
+      {
+        id: "house",
+        name: "Buy a House Rule",
+        category: CalculatorCategory.Warikoo,
+        path: "/calculators/warikoo/house",
+      },
+      {
+        id: "EPIC",
+        name: "E.P.I.C",
+        category: CalculatorCategory.Warikoo,
+        path: "/calculators/warikoo/house",
+      },
+    ],
+    gradient: "from-slate-500 to-zinc-700",
   },
   [CalculatorCategory.Investment]: {
     name: CalculatorCategory.Investment,
