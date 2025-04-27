@@ -93,12 +93,6 @@ export default function LiabilityCalculator({
   };
 
   // Calculate liability details.
-  // For this example, we assume the following fields (from warikooData):
-  // - vehicleCost: Total on-road price / cost of the item.
-  // - monthlyIncome: User's monthly salary after tax.
-  // - downPayment: Optional; if not provided, assume 20% of cost.
-  // - loanTenure: In years (optional; default 4 years).
-  // - interestRate: Annual interest rate for the loan.
   const calculateLiability = () => {
     if (!baseInfo) return;
     // Read inputs with fallbacks
@@ -126,48 +120,82 @@ export default function LiabilityCalculator({
     const maxAffordableEMI = monthlyIncome * 0.1;
     const isEmiValid = EMI <= maxAffordableEMI;
 
-    // Compute cumulative liability over each year.
-    // We'll chart from year 0 to loanTenureYears.
-    const labels: number[] = [];
-    const cumulativeLiability: number[] = [];
-    const realCumulativeLiability: number[] = [];
+    // Initialize arrays for tracking different metrics
+    const labels = Array.from({ length: loanTenureYears + 1 }, (_, i) => i);
+    const outstandingBalance = [];
+    const totalPrincipalPaid = [];
+    const totalInterestPaid = [];
+    const totalPaid = [];
+    const realTotalPaid = [];
 
-    // Start with the down payment already paid.
-    let cumulative = downPayment;
-    labels.push(0);
-    cumulativeLiability.push(cumulative);
-    realCumulativeLiability.push(cumulative); // At time 0, inflation factor = 1
+    // Initial values at year 0
+    outstandingBalance.push(principal);
+    totalPrincipalPaid.push(0);
+    totalInterestPaid.push(0);
+    totalPaid.push(downPayment); // Down payment is already paid at the start
+    realTotalPaid.push(downPayment); // Same for real value (no inflation adjustment at year 0)
+
+    // Calculate amortization schedule (simplified at yearly intervals)
+    let remainingBalance = principal;
 
     for (let year = 1; year <= loanTenureYears; year++) {
-      // For each year, add 12 months of EMI, or if the remaining months are fewer than 12,
-      // adjust accordingly.
-      let monthsToAdd = 12;
-      if (year * 12 > totalMonths) {
-        monthsToAdd = totalMonths % 12;
-      }
-      cumulative += EMI * monthsToAdd;
-      labels.push(year);
-      cumulativeLiability.push(cumulative);
+      // Reset the yearly sums for each new year
+      let yearlyInterestSum = 0;
+      let yearlyPrincipalSum = 0;
+      let inflationFactor = isInflationEnabled
+        ? Math.pow(1 + inflation / 100, year)
+        : 1;
 
-      // Adjust for inflation if enabled:
-      // Here, we discount the nominal cumulative cost by the inflation factor:
-      const inflationFactor = Math.pow(
-        1 + (isInflationEnabled ? inflation / 100 : 0),
-        year
+      // For each month in this year
+      for (let month = 1; month <= 12; month++) {
+        // Only process if we still have months left
+        if ((year - 1) * 12 + month <= totalMonths) {
+          // Calculate interest for this month
+          const interestPayment = remainingBalance * r;
+          // Calculate principal for this month
+          const principalPayment = EMI - interestPayment;
+
+          // Update our running totals
+          yearlyInterestSum += interestPayment;
+          yearlyPrincipalSum += principalPayment;
+
+          // Update the remaining balance
+          remainingBalance -= principalPayment;
+
+          // Ensure balance doesn't go below zero due to rounding
+          if (remainingBalance < 0) remainingBalance = 0;
+        }
+      }
+
+      // Push the yearly data
+      outstandingBalance.push(remainingBalance);
+      totalPrincipalPaid.push(
+        totalPrincipalPaid[year - 1] + yearlyPrincipalSum
       );
-      realCumulativeLiability.push(cumulative / inflationFactor);
+      totalInterestPaid.push(totalInterestPaid[year - 1] + yearlyInterestSum);
+
+      // Total paid includes down payment + principal + interest paid so far
+      const cumulativePaid =
+        downPayment + totalPrincipalPaid[year] + totalInterestPaid[year];
+      totalPaid.push(cumulativePaid);
+
+      // Push real value (adjusted for inflation)
+      realTotalPaid.push(cumulativePaid / inflationFactor);
     }
 
-    // Calculate overall totals for bar chart.
+    // Calculate overall totals for bar chart
     const totalEmiPayment = EMI * totalMonths;
     const totalCost = downPayment + totalEmiPayment;
     const totalInterest = totalEmiPayment - principal;
 
-    // Prepare our chart data structure.
+    // Prepare our chart data structure
     setLiabilityData({
       labels,
-      cumulativeLiability,
-      realCumulativeLiability,
+      outstandingBalance,
+      totalPrincipalPaid,
+      totalInterestPaid,
+      totalPaid,
+      realTotalPaid,
       totalCost,
       totalInterest,
       downPayment,
@@ -177,28 +205,52 @@ export default function LiabilityCalculator({
     });
   };
 
-  // Prepare Line Chart data – showing liability growth over time.
+  // Prepare Line Chart data – showing liability metrics over time
   const lineChartData = {
     labels: liabilityData?.labels,
     datasets: [
       {
-        label: "Nominal Liability",
-        data: liabilityData?.cumulativeLiability,
-        borderColor: "rgb(255, 99, 132)",
-        tension: 0.2,
+        label: "Total Paid (Nominal)",
+        data: liabilityData?.totalPaid,
+        borderColor: "rgb(54, 162, 235)",
+        backgroundColor: "rgba(54, 162, 235, 0.5)",
+        tension: 0.1,
       },
       {
-        label: "Real Liability (Inflation Adjusted)",
-        data: liabilityData?.realCumulativeLiability,
+        label: "Total Paid (Inflation Adjusted)",
+        data: liabilityData?.realTotalPaid,
         borderColor: "rgb(75, 192, 192)",
-        tension: 0.2,
+        backgroundColor: "rgba(75, 192, 192, 0.5)",
+        tension: 0.1,
+        borderDash: [5, 5],
+      },
+      {
+        label: "Outstanding Loan Balance",
+        data: liabilityData?.outstandingBalance,
+        borderColor: "rgb(255, 99, 132)",
+        backgroundColor: "rgba(255, 99, 132, 0.5)",
+        tension: 0.1,
+      },
+      {
+        label: "Principal Paid",
+        data: liabilityData?.totalPrincipalPaid,
+        borderColor: "rgb(153, 102, 255)",
+        backgroundColor: "rgba(153, 102, 255, 0.5)",
+        tension: 0.1,
+      },
+      {
+        label: "Interest Paid",
+        data: liabilityData?.totalInterestPaid,
+        borderColor: "rgb(255, 159, 64)",
+        backgroundColor: "rgba(255, 159, 64, 0.5)",
+        tension: 0.1,
       },
     ],
   };
 
-  // Prepare Bar Chart data – breakdown of costs.
+  // Prepare Bar Chart data – breakdown of costs
   const barChartData = {
-    labels: ["Down Payment", "Loan Amount", "Total Interest"],
+    labels: ["Down Payment", "Principal", "Interest"],
     datasets: [
       {
         label: "Amount (₹)",
@@ -268,10 +320,10 @@ export default function LiabilityCalculator({
 
       {/* Charts Display */}
       {liabilityData && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <div className="grid grid-cols-2 gap-8">
           <div className="bg-white p-6 rounded-lg shadow-lg">
             <h2 className="text-xl font-semibold mb-4">
-              Liability Growth Over Time
+              Vehicle Financing Breakdown Over Time
             </h2>
             <Line
               data={lineChartData}
@@ -279,7 +331,23 @@ export default function LiabilityCalculator({
                 responsive: true,
                 plugins: {
                   legend: { position: "top" },
-                  title: { display: true, text: "Cumulative Liability" },
+                  tooltip: {
+                    callbacks: {
+                      label: function (context) {
+                        let label = context.dataset.label || "";
+                        if (label) {
+                          label += ": ";
+                        }
+                        if (context.parsed.y !== null) {
+                          label += formatCurrency(
+                            context.parsed.y,
+                            currencyConfig
+                          );
+                        }
+                        return label;
+                      },
+                    },
+                  },
                 },
                 scales: {
                   y: {
@@ -289,19 +357,41 @@ export default function LiabilityCalculator({
                         `${formatCurrency(Number(value), currencyConfig)}`,
                     },
                   },
+                  x: {
+                    title: {
+                      display: true,
+                      text: "Years",
+                    },
+                  },
                 },
               }}
             />
           </div>
           <div className="bg-white p-6 rounded-lg shadow-lg">
-            <h2 className="text-xl font-semibold mb-4">Cost Breakdown</h2>
+            <h2 className="text-xl font-semibold mb-4">Total Cost Breakdown</h2>
             <Bar
               data={barChartData}
               options={{
                 responsive: true,
                 plugins: {
                   legend: { position: "top" },
-                  title: { display: true, text: "Liability Components" },
+                  tooltip: {
+                    callbacks: {
+                      label: function (context) {
+                        let label = context.dataset.label || "";
+                        if (label) {
+                          label += ": ";
+                        }
+                        if (context.parsed.y !== null) {
+                          label += formatCurrency(
+                            context.parsed.y,
+                            currencyConfig
+                          );
+                        }
+                        return label;
+                      },
+                    },
+                  },
                 },
                 scales: {
                   y: {
@@ -320,9 +410,22 @@ export default function LiabilityCalculator({
 
       {/* Summary */}
       {liabilityData && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-8">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mt-8">
           <div className="bg-white p-6 rounded-lg shadow-lg">
-            <h3 className="text-lg font-semibold text-gray-700">Total Cost</h3>
+            <h3 className="text-lg font-semibold text-gray-700">
+              Vehicle Cost
+            </h3>
+            <p className="text-2xl font-bold text-blue-600">
+              {formatCurrency(
+                liabilityData.downPayment + liabilityData.principal,
+                currencyConfig
+              )}
+            </p>
+          </div>
+          <div className="bg-white p-6 rounded-lg shadow-lg">
+            <h3 className="text-lg font-semibold text-gray-700">
+              Total Cost with Interest
+            </h3>
             <p className="text-2xl font-bold text-blue-600">
               {formatCurrency(liabilityData.totalCost, currencyConfig)}
             </p>
@@ -340,10 +443,17 @@ export default function LiabilityCalculator({
           </div>
           <div className="bg-white p-6 rounded-lg shadow-lg">
             <h3 className="text-lg font-semibold text-gray-700">
-              Total Interest
+              Total Interest (Extra Cost)
             </h3>
             <p className="text-2xl font-bold text-purple-600">
               {formatCurrency(liabilityData.totalInterest, currencyConfig)}
+            </p>
+            <p className="text-sm text-gray-600 mt-1">
+              {(
+                (liabilityData.totalInterest / liabilityData.principal) *
+                100
+              ).toFixed(1)}
+              % of loan amount
             </p>
           </div>
         </div>
