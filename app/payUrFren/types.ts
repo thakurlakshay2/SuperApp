@@ -16,7 +16,7 @@ export interface Group {
   updatedAt: Date;
   currency: string;
   themeColor: string;
-  expenses?: Expense[];
+  expenses: Expense[];
 }
 
 export interface Expense {

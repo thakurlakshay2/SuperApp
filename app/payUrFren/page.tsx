@@ -9,7 +9,7 @@ import { mockUsers, mockGroups } from "./mockData";
 import { Group, User } from "./types";
 
 export default function Page() {
-  const [groups, setGroups] = useState<Group[]>([]);
+  const [groups, setGroups] = useState<Group[]>(mockGroups);
   const [isAddGroupModalOpen, setIsAddGroupModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

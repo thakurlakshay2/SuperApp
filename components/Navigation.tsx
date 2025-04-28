@@ -35,7 +35,7 @@ export default function Navigation() {
       className={`${
         pathname === "/"
           ? ""
-          : "lg:h-0 h-fit lg:-translate-y-full	 lg:opacity-0 translate-y-0	 opacity-100"
+          : "lg:h-0 h-fit lg:-translate-y-full md:pointer-events-none	 lg:opacity-0 translate-y-0	 opacity-100"
       } transition-all duration-300 ease-in-out sticky  top-0 z-50  backdrop-blur-sm`}
     >
       <nav className=" mx-auto px-4 py-4">

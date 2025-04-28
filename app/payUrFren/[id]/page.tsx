@@ -34,6 +34,7 @@ import {
   Expense,
   ExpenseSplit,
 } from "../types";
+import { mockGroups } from "../mockData";
 
 // Local storage key
 const LOCAL_STORAGE_KEY = "payurfren_groups";
@@ -81,6 +82,12 @@ export default function GroupPage() {
   );
   const [currentUser] = useState("1"); // This would come from auth context in real app
 
+  useEffect(() => {
+    const id = window.location.pathname.split("/").pop();
+
+    setGroup(mockGroups?.[Number(id) - 1]);
+    console.log(id);
+  }, [group]);
   const [txnForm, setTxnForm] = useState({
     paidBy: currentUser,
     amount: "",
@@ -115,7 +122,10 @@ export default function GroupPage() {
     // Load from localStorage
     const storedGroups =
       JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY)) || {};
-
+    console.log(storedGroups);
+    console.log(LOCAL_STORAGE_KEY);
+    console.log(id);
+    console.log(storedGroups[id]);
     if (id && storedGroups[id]) {
       setGroup(storedGroups[id]);
 
@@ -137,7 +147,7 @@ export default function GroupPage() {
       // Update local storage whenever group data changes
       const storedGroups =
         JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY)) || {};
-      storedGroups[group.id] = group;
+      storedGroups[group?.id] = group;
       localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(storedGroups));
 
       // Calculate member balances
@@ -174,7 +184,7 @@ export default function GroupPage() {
         </motion.div>
         <p className="text-xl text-red-500">Group not found</p>
         <button
-          onClick={() => router.push("/groups")}
+          onClick={() => router.push("/payUrFren")}
           className="bg-indigo-600 text-white px-4 py-2 rounded-md mt-4 hover:bg-indigo-700 transition-colors"
         >
           Go back to groups
@@ -183,7 +193,7 @@ export default function GroupPage() {
     );
   }
 
-  const totalBalance = group.expenses.reduce(
+  const totalBalance = group?.expenses?.reduce(
     (acc, txn) =>
       txn.paidBy === currentUser
         ? acc + txn.amount
@@ -196,16 +206,16 @@ export default function GroupPage() {
 
     const newTransaction: Expense = {
       id: String(Date.now()),
-      groupId: String(group.id),
+      groupId: String(group?.id),
       description: txnForm.description,
       amount: Number(txnForm.amount),
       paidBy: txnForm.paidBy,
       date: new Date(txnForm.date),
       category: txnForm.category,
       splitType: txnForm.splitType,
-      splits: group.members.map((member) => ({
+      splits: group?.members.map((member) => ({
         userId: member.id,
-        amount: Number(txnForm.amount) / group.members.length,
+        amount: Number(txnForm.amount) / group?.members.length,
       })),
       notes: txnForm.notes,
     };
@@ -250,7 +260,7 @@ export default function GroupPage() {
     const amount = memberBalances[selectedMember]?.amount || 0;
     const settlementTransaction: Expense = {
       id: String(Date.now()),
-      groupId: String(group.id),
+      groupId: String(group?.id),
       description: `Settlement payment`,
       amount: Math.abs(amount),
       paidBy: amount < 0 ? currentUser : selectedMember,
@@ -283,7 +293,7 @@ export default function GroupPage() {
   const handleAddExpense = (data: ExpenseFormData) => {
     const newExpense: Expense = {
       id: `exp-${Date.now()}`,
-      groupId: group.id.toString(),
+      groupId: group?.id.toString(),
       description: data.description,
       amount: data.amount,
       paidBy: data.paidBy,
@@ -303,7 +313,7 @@ export default function GroupPage() {
   };
 
   const calculateUserBalance = (userId: string) => {
-    return group.expenses.reduce((acc, txn) => {
+    return group?.expenses?.reduce((acc, txn) => {
       if (txn.paidBy === userId) {
         return acc + txn.amount;
       }
@@ -319,7 +329,7 @@ export default function GroupPage() {
   const calculateOwedAmounts = () => {
     const owedAmounts = new Map<string, number>();
 
-    group.expenses.forEach((expense) => {
+    group?.expenses.forEach((expense) => {
       // Add the full amount to what the payer is owed
       owedAmounts.set(
         expense.paidBy,
@@ -357,7 +367,9 @@ export default function GroupPage() {
             >
               <ArrowLeft className="w-5 h-5" />
             </motion.button>
-            <h1 className="text-2xl font-bold text-indigo-600">{group.name}</h1>
+            <h1 className="text-2xl font-bold text-indigo-600">
+              {group?.name}
+            </h1>
           </div>
 
           <div className="flex items-center gap-3">
@@ -397,7 +409,7 @@ export default function GroupPage() {
           >
             <div>
               <p className="text-gray-500">
-                Created on: {new Date(group.createdAt).toLocaleDateString()}
+                Created on: {new Date(group?.createdAt).toLocaleDateString()}
               </p>
               <h2 className="font-semibold text-xl mt-2">
                 Your Balance:{" "}
@@ -419,9 +431,9 @@ export default function GroupPage() {
                 👥
               </motion.div>
               <div className="text-right">
-                <p className="font-medium">{group.members.length} members</p>
+                <p className="font-medium">{group?.members.length} members</p>
                 <p className="text-sm text-gray-500">
-                  {group.expenses.length} transactions
+                  {group?.expenses.length} transactions
                 </p>
               </div>
             </div>
@@ -436,7 +448,7 @@ export default function GroupPage() {
               <p className="text-sm text-gray-500">Total Spent</p>
               <p className="font-bold text-lg">
                 {formatCurrency(
-                  group.expenses.reduce((acc, txn) => acc + txn.amount, 0)
+                  group?.expenses?.reduce((acc, txn) => acc + txn.amount, 0)
                 )}
               </p>
             </div>
@@ -444,7 +456,7 @@ export default function GroupPage() {
               <p className="text-sm text-gray-500">You Paid</p>
               <p className="font-bold text-lg">
                 {formatCurrency(
-                  group.expenses
+                  group?.expenses
                     .filter((t) => t.paidBy === currentUser)
                     .reduce((acc, txn) => acc + txn.amount, 0)
                 )}
@@ -454,11 +466,11 @@ export default function GroupPage() {
               <p className="text-sm text-gray-500">Your Share</p>
               <p className="font-bold text-lg">
                 {formatCurrency(
-                  group.expenses.reduce((acc, txn) => {
+                  group?.expenses?.reduce((acc, txn) => {
                     const includedParticipants =
                       txn.splits?.filter((p) => p.userId)?.length ||
                       txn.splits?.length ||
-                      group.members.length;
+                      group?.members.length;
                     return acc + txn.amount / includedParticipants;
                   }, 0)
                 )}
@@ -468,7 +480,7 @@ export default function GroupPage() {
               <p className="text-sm text-gray-500">Settlements</p>
               <p className="font-bold text-lg">
                 {formatCurrency(
-                  group.expenses
+                  group?.expenses
                     .filter((t) => t.paidBy)
                     .reduce((acc, txn) => acc + txn.amount, 0)
                 )}
@@ -538,7 +550,7 @@ export default function GroupPage() {
                 initial="hidden"
                 animate="visible"
               >
-                {group.expenses.map((expense) => (
+                {group?.expenses.map((expense) => (
                   <motion.div
                     key={expense.id}
                     className="p-4 bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow"
@@ -557,8 +569,9 @@ export default function GroupPage() {
                             {new Date(expense.date).toLocaleDateString()} • Paid
                             by{" "}
                             {
-                              group.members.find((m) => m.id === expense.paidBy)
-                                ?.name
+                              group?.members.find(
+                                (m) => m.id === expense.paidBy
+                              )?.name
                             }
                           </p>
                         </div>
