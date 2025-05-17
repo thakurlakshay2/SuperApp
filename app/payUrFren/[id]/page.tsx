@@ -68,7 +68,7 @@ interface ExpenseFormData {
   notes?: string;
 }
 
-export default function GroupPage() {
+export default function Page() {
   const router = useRouter();
   const [group, setGroup] = useState<Group | null>(null);
   const [loading, setLoading] = useState(true);
