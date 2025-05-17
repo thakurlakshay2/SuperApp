@@ -1,8 +1,8 @@
 import React from "react";
-import { Group, User } from "../types";
+import { Group, User } from "../../app/payUrFren/types";
 import { motion } from "framer-motion";
 import { Users, Calendar, ArrowRight } from "lucide-react";
-import { formatCurrency } from "../utils";
+import { formatCurrency } from "../../app/payUrFren/utils";
 import Link from "next/link";
 
 interface GroupCardProps {

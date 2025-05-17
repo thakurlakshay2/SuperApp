@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Group, User } from "../types";
+import { Group, User } from "../../app/payUrFren/types";
 import GroupCard from "./GroupCard";
 import { motion } from "framer-motion";
 import { Search, Filter, ChevronDown } from "lucide-react";

@@ -1,6 +1,11 @@
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Expense, User, ExpenseCategory, SplitType } from "../../types";
+import {
+  Expense,
+  User,
+  ExpenseCategory,
+  SplitType,
+} from "../../app/payUrFren/types";
 import {
   X,
   Image as ImageIcon,

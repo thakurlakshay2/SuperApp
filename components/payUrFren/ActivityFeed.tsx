@@ -1,5 +1,5 @@
 import React from "react";
-import { User, Expense } from "../../types";
+import { User, Expense } from "../../app/payUrFren/types";
 import { Clock, DollarSign, Users, FileText } from "lucide-react";
 
 interface ActivityFeedProps {

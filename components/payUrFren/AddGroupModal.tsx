@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Group, User } from "../types";
+import { Group, User } from "../../app/payUrFren/types";
 import { X, ArrowLeft, ArrowRight, Image as ImageIcon } from "lucide-react";
 
 interface AddGroupModalProps {
@@ -67,6 +67,8 @@ const AddGroupModal: React.FC<AddGroupModalProps> = ({
   };
 
   if (!isOpen) return null;
+
+  const filteredUsers = availableUsers.filter((u) => u.id !== currentUser.id);
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -158,7 +160,7 @@ const AddGroupModal: React.FC<AddGroupModalProps> = ({
                     Select Members
                   </label>
                   <div className="space-y-2 max-h-60 overflow-y-auto">
-                    {availableUsers.map((user) => (
+                    {filteredUsers.map((user) => (
                       <div
                         key={user.id}
                         className="flex items-center justify-between p-2 border border-gray-200 rounded-lg hover:bg-gray-50"

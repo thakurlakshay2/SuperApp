@@ -1,5 +1,5 @@
 import React from "react";
-import { User } from "../types";
+import { User } from "../../app/payUrFren/types";
 import { motion } from "framer-motion";
 import { Bell, Plus, User as UserIcon } from "lucide-react";
 import Link from "next/link";

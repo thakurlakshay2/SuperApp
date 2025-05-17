@@ -1,10 +1,10 @@
 "use client";
+
 import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Plus } from "lucide-react";
-import GroupList from "./components/GroupList";
-import Header from "./components/Header";
-import AddGroupModal from "./components/AddGroupModal";
+import GroupList from "../../components/payUrFren/GroupList";
+import Header from "../../components/payUrFren/Header";
+import AddGroupModal from "../../components/payUrFren/AddGroupModal";
 import { mockUsers, mockGroups } from "./mockData";
 import { Group, User } from "./types";
 

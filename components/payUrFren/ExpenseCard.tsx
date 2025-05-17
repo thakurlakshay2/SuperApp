@@ -1,8 +1,8 @@
 import React from "react";
-import { Expense, User } from "../../types";
+import { Expense, User } from "../../app/payUrFren/types";
 import { motion } from "framer-motion";
 import { Receipt, MoreVertical } from "lucide-react";
-import { formatCurrency } from "../../utils";
+import { formatCurrency } from "../../app/payUrFren/utils";
 
 interface ExpenseCardProps {
   expense: Expense;

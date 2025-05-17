@@ -1,5 +1,5 @@
 import React from "react";
-import { User, Expense } from "../../types";
+import { User, Expense } from "../../app/payUrFren/types";
 import { ArrowRight, ArrowLeft } from "lucide-react";
 
 interface BalanceSummaryProps {
