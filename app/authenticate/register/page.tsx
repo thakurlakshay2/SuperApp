@@ -9,6 +9,7 @@ import {
   ArrowLeft,
   User,
 } from "lucide-react";
+import { registerApi, RegisterRequest } from "../../../utils/authApi";
 
 export const RegisterPage = ({
   onRegister,
@@ -47,16 +48,23 @@ export const RegisterPage = ({
       alert("Passwords do not match!");
       return;
     }
-
     setIsLoading(true);
-    await new Promise((resolve) => setTimeout(resolve, 2000));
-
-    onRegister({
-      username: formData.name,
-      password: formData.password,
-      email: formData.email,
-      phone: formData.phone,
-    });
+    try {
+      const registerData: RegisterRequest = {
+        username: formData.name,
+        email: formData.email,
+        phone: formData.phone,
+        password: formData.password,
+      };
+      await registerApi(registerData);
+      onRegister(registerData);
+    } catch (err: any) {
+      alert(
+        "Registration failed: " + (err?.response?.data?.message || err.message)
+      );
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (

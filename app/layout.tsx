@@ -8,6 +8,9 @@ import { ToastProvider } from "@/shared/Toast/toastContext";
 
 import Navigation from "@/components/Navigation";
 import dynamic from "next/dynamic";
+import { isLoggedIn } from "@/utils/authApi";
+import { usePathname, useRouter } from "next/navigation";
+import { useEffect } from "react";
 
 const ThreeScene = dynamic(() => import("../components/ThreeScene"), {
   ssr: false,
@@ -23,6 +26,13 @@ export default function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
+  const pathname = usePathname();
+  const router = useRouter();
+  useEffect(() => {
+    if (!isLoggedIn() && pathname !== "/authenticate") {
+      router.replace("/authenticate");
+    }
+  }, [pathname]);
   return (
     <html lang="en">
       <head>

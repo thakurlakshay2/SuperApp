@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { isLoggedIn } from "@/utils/authApi";
 
 const menuItems = [
   { title: "Home", href: "/" },
@@ -24,9 +25,11 @@ export default function Navigation() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
+  const [loggedIn, setLoggedIn] = useState(false);
 
   useEffect(() => {
     setIsMenuOpen(false);
+    setLoggedIn(isLoggedIn());
   }, [pathname]);
   return (
     <motion.header
@@ -81,6 +84,17 @@ export default function Navigation() {
             >
               Launch App
             </motion.button>
+            {/* User Icon */}
+            {loggedIn && (
+              <div
+                title="Logged in"
+                className="ml-4 flex items-center justify-center w-10 h-10 rounded-full bg-blue-100 border border-blue-300 text-blue-700 text-xl"
+              >
+                <span role="img" aria-label="User">
+                  👤
+                </span>
+              </div>
+            )}
           </div>
 
           {/* Mobile Menu Button */}
